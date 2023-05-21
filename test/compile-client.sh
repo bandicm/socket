@@ -1,0 +1,1 @@
+g++ client.cpp ../src/* -o client.o
