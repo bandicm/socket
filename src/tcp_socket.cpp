@@ -12,10 +12,9 @@ server::server (const ushort port, const uint limit) {
     }
 
     int opt=1;
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         printf("[ERROR] Ne mogu otvoriti defenirani TCP/IP socket!");
     }
-    printf("[EVENT] Otvoren defenirani TCP/IP socket.");
 
     if (bind(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
         printf("[ERROR] Ne mogu bindati defenirani TCP/IP socket!");
@@ -30,11 +29,11 @@ server::server (const ushort port, const uint limit) {
 
 server::~server () {
 
-    if (sock<0) {
+    if (sock<=0) {
         printf ("[ERROR] Soket destruktor: već zatvoren soket!");
     }
 
-    else if (!close(sock)) {
+    else if (close(sock) != 0) {
         printf ("[ERROR] Soket destruktor nije mogao zatvoriti soket!");
     }
 
