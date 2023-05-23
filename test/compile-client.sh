@@ -1,1 +1,1 @@
-g++ client.cpp ../src/* -o client.o
+g++ client.cpp ../src/* -o client.o -lssl -lcrypto

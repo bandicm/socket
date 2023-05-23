@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include "ip.hpp"
 
@@ -20,16 +22,25 @@ class server {
     server (const ushort port, const uint limit = 1000);
     ~server ();
 
-    
 };
 
+class secure {
+    public:
+    SSL_CTX* fds;
+
+    secure(); // client
+    secure(const string cert, const string priv);   //server
+    ~secure();
+
+};
 
 class client {
     public:
     int sock;
     struct sockaddr_in addr;
+    SSL* ssl = NULL;
 
-    client (const string address, const ushort port);
+    client (const string address, const ushort port, const uint timeout = 500, SSL_CTX* securefds = NULL);
     ~client ();
     bool tell (const string msg);
     string obey (size_t byte_limit = 1024);
@@ -39,14 +50,17 @@ class client {
 class comming {
     public:
     const server *srv;
+    struct sockaddr_in addr;
     int conn;
     string ipv4;
     string ipv6;
+    SSL* ssl = NULL;
 
-    comming(const server *_srv, const uint timeout);
+    comming(const server *_srv, const uint timeout = 100, SSL_CTX* securefds = NULL);
     ~comming();
     bool tell (const string msg);
     string obey (size_t byte_limit = 1024);
+
 
 };
 
