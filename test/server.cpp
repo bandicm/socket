@@ -5,7 +5,7 @@
 using namespace std;
 
 int main() {
-
+try{
     cout << "init server " << endl;
     server myserver(5000, 10);
     cout << "init cert " << endl;
@@ -31,7 +31,9 @@ int main() {
     // }
 
     // sleep(80);
-
-
+}
+catch(const string err) {
+    cout << err << endl;
+}
     return 0;
 }

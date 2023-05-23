@@ -14,6 +14,11 @@
 
 using namespace std;
 
+/**
+ * Server klasa za TCP/IP soket
+ * Instanca se incijalizira kada pokrećemo server
+*/
+
 class server {
     public:
     int sock;
@@ -24,6 +29,11 @@ class server {
 
 };
 
+/**
+ * Klasa za konstrukciju i destrukciju SSL certifikata
+ * Pokreće se za server i client - (različiti konstruktori)
+*/
+
 class secure {
     public:
     SSL_CTX* fds;
@@ -33,6 +43,11 @@ class secure {
     ~secure();
 
 };
+
+
+/**
+ * Klasa za definiranje TCP soketa kod klijentskih aplikacija
+*/
 
 class client {
     public:
@@ -46,6 +61,11 @@ class client {
     string obey (size_t byte_limit = 1024);
 };
 
+
+/**
+ * Klasa za inicijalizaciju dolaznih veza
+ * Definira se na serverskom tipu aplikacija i predstavlja identifikator klijenta
+*/
 
 class comming {
     public:
