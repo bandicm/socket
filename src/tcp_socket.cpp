@@ -12,21 +12,21 @@ server::server (const ushort port, const uint limit) {
 
     sock = socket(AF_INET, SOCK_STREAM, 0); 
     if (sock <= 0) {  
-        throw "[ERROR] Unable to open TCP socket ";
+        throw string("[ERROR] Unable to open TCP socket ");
 
     }
 
     int opt=1;
     if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        throw "[ERROR] Unable to set REUSEADDR or REUSEPORT on socket ";
+        throw string("[ERROR] Unable to set REUSEADDR or REUSEPORT on socket ");
     }
 
     if (bind(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
-        throw "[ERROR] Unable to bind socket ";
+        throw string("[ERROR] Unable to bind socket ");
     }
 
     if (listen(sock, limit) < 0) {
-        throw "[ERROR] It is not possible to set the allowed number of waiting clients ";
+        throw string("[ERROR] It is not possible to set the allowed number of waiting clients ");
     }
 
 }
@@ -39,11 +39,11 @@ server::server (const ushort port, const uint limit) {
 server::~server () {
 
     if (sock<=0) {
-        throw "[ERROR] The socket is already closed "; 
+        throw string("[ERROR] The socket is already closed "); 
     }
 
     else if (close(sock) != 0) {
-        throw "[ERROR] Unable to close socket ";
+        throw string("[ERROR] Unable to close socket ");
     }
 
 }
@@ -55,7 +55,7 @@ server::~server () {
 secure::secure() {
     fds = SSL_CTX_new(SSLv23_client_method());
     if (!fds) {
-        throw "[ERROR] Creating SSL context ";
+        throw string("[ERROR] Creating SSL context ");
 
     }
 }
@@ -74,16 +74,16 @@ secure::secure(const string cert, const string priv) {
         // Create an SSL context
     fds = SSL_CTX_new(SSLv23_server_method());
     if (!fds) {
-        throw "[ERROR] Creating SSL context ";
+        throw string("[ERROR] Creating SSL context ");
     }
 
     // Load the server's certificate and private key files
     if (SSL_CTX_use_certificate_file(fds, cert.c_str(), SSL_FILETYPE_PEM) <= 0) {
-        throw "[ERROR] Loading certificate file ";
+        throw string("[ERROR] Loading certificate file ");
     }
 
     if (SSL_CTX_use_PrivateKey_file(fds, priv.c_str(), SSL_FILETYPE_PEM) <= 0) {
-        throw "[ERROR] Loading private key file ";
+        throw string("[ERROR] Loading private key file ");
     }
 
 }
@@ -107,7 +107,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
-        throw "[ERROR] Unable to open TCP socket ";
+        throw string("[ERROR] Unable to open TCP socket ");
 	}
 
     const string _address = isIPAddress(address) ? address : ipFromDomain(address);
@@ -117,7 +117,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 	addr.sin_port = htons(port);
 
     if (connect(sock, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) != 0) {
-        throw "Unable to connect to server ";
+        throw string("Unable to connect to server ");
     }
 
     struct timeval tv;
@@ -125,13 +125,13 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
     tv.tv_usec = timeout*1000;
 
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
-        throw "[ERROR] Unable to set timeout ";
+        throw string("[ERROR] Unable to set timeout ");
     }
 
     if (securefds) {
         ssl = SSL_new(securefds);
         if (!ssl) {
-            throw "[ERROR] Creating SSL object ";
+            throw string("[ERROR] Creating SSL object ");
         }
         SSL_set_fd(ssl, sock);
 
@@ -139,7 +139,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
         // Perform the SSL handshake
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        throw "[ERROR] Performing SSL handshake ";
+        throw string("[ERROR] Performing SSL handshake ");
     }
 
 }
@@ -157,11 +157,11 @@ client::~client () {
     }
 
     if (sock <= 0) {
-        throw "[ERROR] The socket is already closed "; 
+        throw string("[ERROR] The socket is already closed "); 
     }
 
     else if (close(sock) != 0) {
-        throw "[ERROR] Unable to close socket ";
+        throw string("[ERROR] Unable to close socket ");
     }
 
 }
@@ -216,28 +216,28 @@ comming::comming(const server *_srv, const uint timeout, SSL_CTX* securefds) {
     socklen_t len = sizeof(struct sockaddr_in);
 
     if ((conn = accept(srv->sock, (struct sockaddr *)&(srv->addr), (socklen_t*)&len)) < 0) {
-        throw "[ERROR] Unable to accept client connection ";
+        throw string("[ERROR] Unable to accept client connection ");
     }
 
     struct timeval tv;
-    tv.tv_sec = 1;		// za sad 2 sekunde timeout, harkodirano
-    tv.tv_usec = 0;
+    tv.tv_sec = 0;		// za sad 2 sekunde timeout, harkodirano
+    tv.tv_usec = timeout*1000;
 
     if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
-        throw "[ERROR] Unable to set timeout ";
+        throw string("[ERROR] Unable to set timeout ");
     }
 
 
     if (securefds) {
         ssl = SSL_new(securefds);
         if (!ssl) {
-            throw "[ERROR] Creating SSL object ";
+            throw string("[ERROR] Creating SSL object ");
         }
         SSL_set_fd(ssl, conn);
         // Perform SSL handshake
         if (SSL_accept(ssl) <= 0) {
             SSL_free(ssl);
-            throw "[ERROR] Performing SSL handshake ";
+            throw string("[ERROR] Performing SSL handshake ");
         }
     }    
 
@@ -264,11 +264,11 @@ comming::~comming() {
     }
 
     if (conn <= 0) {
-        throw "[ERROR] The socket is already closed "; 
+        throw string("[ERROR] The socket is already closed "); 
     }
 
     else if (close(conn) != 0) {
-        throw "[ERROR] Unable to close socket ";
+        throw string("[ERROR] Unable to close socket ");
     }
 }
 
