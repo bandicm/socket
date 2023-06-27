@@ -55,7 +55,7 @@ class client {
     struct sockaddr_in addr;
     SSL* ssl = NULL;
 
-    client (const string address, const ushort port, const uint timeout = 500, SSL_CTX* securefds = NULL);
+    client (const string address, const ushort port, const uint timeout = 100, SSL_CTX* securefds = NULL);
     ~client ();
     bool tell (const string msg);
     string obey (size_t byte_limit = 1024);

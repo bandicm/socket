@@ -53,6 +53,11 @@ server::~server () {
 */
 
 secure::secure() {
+
+    SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
+
     fds = SSL_CTX_new(SSLv23_client_method());
     if (!fds) {
         throw string("[ERROR] Creating SSL context ");
@@ -71,7 +76,7 @@ secure::secure(const string cert, const string priv) {
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 
-        // Create an SSL context
+    // Create an SSL context
     fds = SSL_CTX_new(SSLv23_server_method());
     if (!fds) {
         throw string("[ERROR] Creating SSL context ");
@@ -135,12 +140,13 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
         }
         SSL_set_fd(ssl, sock);
 
-    }
         // Perform the SSL handshake
-    if (SSL_connect(ssl) <= 0) {
-        SSL_free(ssl);
-        throw string("[ERROR] Performing SSL handshake ");
+        if (SSL_connect(ssl) <= 0) {
+            SSL_free(ssl);
+            throw string("[ERROR] Performing SSL handshake ");
+        }
     }
+    
 
 }
 
@@ -234,6 +240,7 @@ comming::comming(const server *_srv, const uint timeout, SSL_CTX* securefds) {
             throw string("[ERROR] Creating SSL object ");
         }
         SSL_set_fd(ssl, conn);
+
         // Perform SSL handshake
         if (SSL_accept(ssl) <= 0) {
             SSL_free(ssl);

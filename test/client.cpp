@@ -8,11 +8,19 @@ int main() {
 
     try {
 
-    secure crypto;
-    client myserver("localhost", 5000, 500, crypto.fds);
-    string sends = "Hello world!";
-    cout << myserver.tell(sends) << " " << sends.length() << endl;
-    cout << myserver.obey();
+        secure crypto;
+        cout << "init cert " << endl;
+
+        client myserver("127.0.0.1", 5000, 500, crypto.fds);
+        // client myserver("localhost", 5000);
+        cout << "init client " << endl;
+
+
+        string sends = "Hello world!";
+        cout << myserver.tell(sends) << " " << sends.length() << endl;
+        cout << "wait client " << endl;
+
+        cout << myserver.obey();
 
     }
     catch (const string err) {
