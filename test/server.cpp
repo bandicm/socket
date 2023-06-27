@@ -18,7 +18,8 @@ int main() {
 
         string fromclient =  myclient.obey();
         cout << "tell client " << fromclient << endl;
-        // sleep(5);
+        // usleep(600*1000);
+        sleep(5);
         myclient.tell(fromclient);
         // myclient.~comming();
 

@@ -126,8 +126,8 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
     }
 
     struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = timeout*1000;
+    tv.tv_sec = timeout/1000;
+    tv.tv_usec = (timeout%1000)*1000;
 
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
         throw string("[ERROR] Unable to set timeout ");
@@ -206,7 +206,7 @@ string client::obey (size_t byte_limit) {
         read(sock , res, byte_limit);
     }
 
-    return (string) res;
+    return string(res);
 }
 
 /**
@@ -226,8 +226,8 @@ comming::comming(const server *_srv, const uint timeout, SSL_CTX* securefds) {
     }
 
     struct timeval tv;
-    tv.tv_sec = 0;		// za sad 2 sekunde timeout, harkodirano
-    tv.tv_usec = timeout*1000;
+    tv.tv_sec = timeout/1000;
+    tv.tv_usec = (timeout%1000)*1000;
 
     if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
         throw string("[ERROR] Unable to set timeout ");
@@ -313,5 +313,5 @@ string comming::obey (size_t byte_limit) {
         read(conn , res, byte_limit);
     }
 
-    return (string) res;
+    return string(res);
 }
