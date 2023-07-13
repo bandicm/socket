@@ -158,8 +158,8 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 */
 
 
-client::client(const uint timeout, SSL_CTX* securefds) {
-    // srv = _srv;
+client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
+    srv = _srv;
     socklen_t len = sizeof(struct sockaddr_in);
 
     if ((conn = accept(srv->sock, (struct sockaddr *)&(srv->addr), (socklen_t*)&len)) < 0) {
