@@ -110,8 +110,8 @@ secure::~secure () {
 
 client::client(const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
 
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0) {
+    conn = socket(AF_INET, SOCK_STREAM, 0);
+	if (conn < 0) {
         throw string("[ERROR] Unable to open TCP socket ");
 	}
 
@@ -121,7 +121,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 	addr.sin_addr.s_addr = inet_addr(_address.c_str());
 	addr.sin_port = htons(port);
 
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) != 0) {
+    if (connect(conn, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) != 0) {
         throw string("Unable to connect to server ");
     }
 
@@ -129,7 +129,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
     tv.tv_sec = timeout/1000;
     tv.tv_usec = (timeout%1000)*1000;
 
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
+    if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
         throw string("[ERROR] Unable to set timeout ");
     }
 
@@ -138,7 +138,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
         if (!ssl) {
             throw string("[ERROR] Creating SSL object ");
         }
-        SSL_set_fd(ssl, sock);
+        SSL_set_fd(ssl, conn);
 
         // Perform the SSL handshake
         if (SSL_connect(ssl) <= 0) {
@@ -150,65 +150,6 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 
 }
 
-
-/**
- * Destruktor varijable tipa client
-*/
-
-client::~client () {
-
-    if (ssl) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-    }
-
-    if (sock <= 0) {
-        throw string("[ERROR] The socket is already closed "); 
-    }
-
-    else if (close(sock) != 0) {
-        throw string("[ERROR] Unable to close socket ");
-    }
-
-}
-
-/**
- * Metoda klase client za slanje podataka preko soketa
- * Prima string koji će biti poslan
- * Vraća logički statu poređenja psolanih karaktera i karaktera u stringu
-*/
-
-
-bool client::tell (const string msg) {
-    size_t sended = 0;
-    if (ssl) {
-       sended = SSL_write(ssl, msg.c_str(), msg.length());
-    }
-    else {
-        sended = write(sock, msg.c_str(), msg.length());
-    }
-    return sended == msg.length();
-}
-
-/**
- * Metoda klase client za primanje poruke preko soketa
- * Prima dozvoljeni broj karaktera koji će primiti
- * Vraća string primljene poruke
-*/
-
-string client::obey (size_t byte_limit) {
-   char res[byte_limit] = {0};
-
-    if (ssl) {
-        SSL_read(ssl, res, byte_limit);
-    }
-    else {
-        read(sock , res, byte_limit);
-    }
-
-    return string(res);
-}
-
 /**
  * Konstruktor varijable tipa commint
  * Prima pokazivač na inicijaliziranu varijablu tipa, port, 
@@ -217,8 +158,8 @@ string client::obey (size_t byte_limit) {
 */
 
 
-comming::comming(const server *_srv, const uint timeout, SSL_CTX* securefds) {
-    srv = _srv;
+client::client(const uint timeout, SSL_CTX* securefds) {
+    // srv = _srv;
     socklen_t len = sizeof(struct sockaddr_in);
 
     if ((conn = accept(srv->sock, (struct sockaddr *)&(srv->addr), (socklen_t*)&len)) < 0) {
@@ -259,11 +200,12 @@ comming::comming(const server *_srv, const uint timeout, SSL_CTX* securefds) {
 
 }
 
+
 /**
- * Destruktor varijable tipa comming
+ * Destruktor varijable tipa client
 */
 
-comming::~comming() {
+client::~client () {
 
     if (ssl) {
         SSL_shutdown(ssl);
@@ -277,16 +219,18 @@ comming::~comming() {
     else if (close(conn) != 0) {
         throw string("[ERROR] Unable to close socket ");
     }
+
 }
 
 /**
- * Metoda klase comming za slanje podataka preko soketa
+ * Metoda klase client za slanje podataka preko soketa
  * Prima string koji će biti poslan
  * Vraća logički statu poređenja psolanih karaktera i karaktera u stringu
 */
 
-bool comming::tell (const string msg) {
-    ssize_t sended = 0;
+
+bool client::push (const string msg) {
+    size_t sended = 0;
     if (ssl) {
        sended = SSL_write(ssl, msg.c_str(), msg.length());
     }
@@ -296,15 +240,14 @@ bool comming::tell (const string msg) {
     return sended == msg.length();
 }
 
-
 /**
- * Metoda klase comming za primanje poruke preko soketa
+ * Metoda klase client za primanje poruke preko soketa
  * Prima dozvoljeni broj karaktera koji će primiti
  * Vraća string primljene poruke
 */
 
-string comming::obey (size_t byte_limit) {
-    char res[byte_limit] = {0};
+string client::pull (size_t byte_limit) {
+   char res[byte_limit] = {0};
 
     if (ssl) {
         SSL_read(ssl, res, byte_limit);
@@ -315,3 +258,6 @@ string comming::obey (size_t byte_limit) {
 
     return string(res);
 }
+
+
+

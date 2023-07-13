@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 #include <string.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -26,6 +27,10 @@ class server {
 
     server (const ushort port, const uint limit = 1000);
     ~server ();
+
+    // dok god živi server žive i klijenti - klijetni moraju biti dio servera
+    // omogućiti enkripciju i na nivou servera
+
 
 };
 
@@ -51,40 +56,21 @@ class secure {
 
 class client {
     public:
-    int sock;
+    // zajedničke
+    int conn; // mijenja sock
     struct sockaddr_in addr;
     SSL* ssl = NULL;
-
-    client (const string address, const ushort port, const uint timeout = 100, SSL_CTX* securefds = NULL);
-    ~client ();
-    bool tell (const string msg);
-    string obey (size_t byte_limit = 1024);
-};
-
-
-/**
- * Klasa za inicijalizaciju dolaznih veza
- * Definira se na serverskom tipu aplikacija i predstavlja identifikator klijenta
-*/
-
-class comming {
-    public:
-    const server *srv;
-    struct sockaddr_in addr;
-    int conn;
+    // klijent sa serverom
     string ipv4;
     string ipv6;
-    SSL* ssl = NULL;
-
-    comming(const server *_srv, const uint timeout = 100, SSL_CTX* securefds = NULL);
-    ~comming();
-    bool tell (const string msg);
-    string obey (size_t byte_limit = 1024);
-
-
+    
+    // konstruktor za klijente bez servera
+    client (const string address, const ushort port, const uint timeout = 100, SSL_CTX* securefds = NULL);
+    // konstruktor za klijente sa serverom
+    client (const server *_srv, const uint timeout = 100, SSL_CTX* securefds = NULL);
+    ~client ();
+    bool push (const string msg);
+    string pull (size_t byte_limit = 1024);
 };
-
-
-
 
 #endif

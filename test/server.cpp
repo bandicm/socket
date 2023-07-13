@@ -12,15 +12,15 @@ int main() {
         secure crypto ("../example/cert.pem", "../example/privkey.pem");
         cout << "init client " << endl;
 
-        comming myclient(&myserver, 100, crypto.fds);
+        client myclient(&myserver, 100, crypto.fds);
         // comming myclient(&myserver, 100);
         cout << "wait client " << myclient.ipv4 << endl;
 
-        string fromclient =  myclient.obey();
+        string fromclient =  myclient.pull();
         cout << "tell client " << fromclient << endl;
         // usleep(600*1000);
         sleep(5);
-        myclient.tell(fromclient);
+        myclient.push(fromclient);
         // myclient.~comming();
 
         // while (true) {

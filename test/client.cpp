@@ -17,10 +17,10 @@ int main() {
 
 
         string sends = "Hello world!";
-        cout << myserver.tell(sends) << " " << sends.length() << endl;
+        cout << myserver.push(sends) << " " << sends.length() << endl;
         cout << "wait client " << endl;
 
-        cout << myserver.obey();
+        cout << myserver.pull();
 
     }
     catch (const string err) {
