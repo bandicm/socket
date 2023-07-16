@@ -15,6 +15,11 @@
 
 using namespace std;
 
+class client;
+// class secure;
+// class server;
+
+
 /**
  * Server klasa za TCP/IP soket
  * Instanca se incijalizira kada pokrećemo server
@@ -24,13 +29,14 @@ class server {
     public:
     int sock;
     struct sockaddr_in addr;
+    SSL_CTX* securefds = NULL;
 
-    server (const ushort port, const uint limit = 1000);
+    server (const ushort port, const uint limit = 1000, SSL_CTX* _securefds = NULL);
     ~server ();
 
-    // dok god živi server žive i klijenti - klijetni moraju biti dio servera
-    // omogućiti enkripciju i na nivou servera
-
+    // one klijent
+    client* cli;
+    void accept(const uint timeout = 100);   
 
 };
 
@@ -60,6 +66,8 @@ class client {
     int conn; // mijenja sock
     struct sockaddr_in addr;
     SSL* ssl = NULL;
+    // server s klijentima
+    const server* srv;
     // klijent sa serverom
     string ipv4;
     string ipv6;

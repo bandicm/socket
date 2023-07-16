@@ -4,7 +4,8 @@
  * Kontrustruktor varijable tipa server, prima port i limit za ograničenje liste klijenata na čekanju
 */
 
-server::server (const ushort port, const uint limit) {
+server::server (const ushort port, const uint limit, SSL_CTX* _securefds) {
+    securefds = _securefds;
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -31,12 +32,19 @@ server::server (const ushort port, const uint limit) {
 
 }
 
+void server::accept(const uint timeout) {
+    cli = new client(this, timeout, securefds);
+}
+
 /**
  * Destruktor varijable tipa server
 */
 
 
 server::~server () {
+
+    cli->~client();
+    cli = NULL;
 
     if (sock<=0) {
         throw string("[ERROR] The socket is already closed "); 

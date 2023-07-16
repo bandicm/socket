@@ -6,21 +6,26 @@ using namespace std;
 
 int main() {
     try{
-        cout << "init server " << endl;
-        server myserver(5000);
         cout << "init cert " << endl;
         secure crypto ("../example/cert.pem", "../example/privkey.pem");
+        cout << "init server " << endl;
+        server myserver(5000, 100, crypto.fds);
+        
         cout << "init client " << endl;
 
-        client myclient(&myserver, 100, crypto.fds);
+        // client myclient(&myserver, 100, crypto.fds);
         // comming myclient(&myserver, 100);
-        cout << "wait client " << myclient.ipv4 << endl;
+        myserver.accept();
+        // cout << "wait client " << myclient.ipv4 << endl;
+        cout << "wait client " << myserver.cli->ipv4 << endl;
 
-        string fromclient =  myclient.pull();
+        string fromclient =  myserver.cli->pull();
+        // string fromclient =  myclient.pull();
         cout << "tell client " << fromclient << endl;
         // usleep(600*1000);
         sleep(5);
-        myclient.push(fromclient);
+        myserver.cli->push(fromclient);
+        // myclient.push(fromclient);
         // myclient.~comming();
 
         // while (true) {
