@@ -118,6 +118,15 @@ secure::~secure () {
 
 client::client(const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
 
+    #if _WIN32
+        WSADATA wsa;
+        SOCKET s;
+        if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
+            //printf("Failed. Error Code : %d",WSAGetLastError());
+            throw string("[ERROR] Unable to set WinSock " + to_string(WSAGetLastError()));
+        }
+    #endif
+
     conn = socket(AF_INET, SOCK_STREAM, 0);
 	if (conn < 0) {
         throw string("[ERROR] Unable to open TCP socket ");
@@ -214,6 +223,10 @@ client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
 */
 
 client::~client () {
+
+    #if _WIN32
+        WSACleanup();
+    #endif
 
     if (ssl) {
         SSL_shutdown(ssl);

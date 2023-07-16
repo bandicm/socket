@@ -5,11 +5,18 @@
 #include <string>
 #include <vector>
 #include <string.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#if __linux__
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #include <unistd.h>
+#elif _WIN32
+    // #include <sstream>
+    #include <WinSock.h>
+    #include <ws2tcpip.h>
+#endif
 
 #include "ip.hpp"
 
