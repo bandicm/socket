@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread>
 #include <string.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -37,6 +38,10 @@ class server {
     // one klijent
     client* cli;
     void accept(const uint timeout = 100);   
+
+    vector<thread> thr;
+    vector<client*> clis;
+    void asyncli(const uint limit, void (*handlecli)(client*) , const uint timeout = 100);
 
 };
 

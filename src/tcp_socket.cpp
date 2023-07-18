@@ -36,6 +36,25 @@ void server::accept(const uint timeout) {
     cli = new client(this, timeout, securefds);
 }
 
+
+void server::asyncli(const uint limit, void (*handlecli)(client*), const uint timeout) {
+    do {
+        thr.clear();
+        clis.clear();
+        for (uint i=0; i<limit; i++) {
+            clis.push_back(new client(this, timeout, securefds));
+            thr.push_back(thread(handlecli, clis[clis.size()-1]));
+        }
+
+        for (uint i=0; i<limit; i++) {
+            thr[i].join();
+            clis[i]->~client();
+        }
+
+    } while (true);
+}
+
+
 /**
  * Destruktor varijable tipa server
 */

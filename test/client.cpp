@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include "../lib/tcp_socket.hpp"
 
@@ -8,19 +9,35 @@ int main() {
 
     try {
 
-        secure crypto;
-        cout << "init cert " << endl;
+        uint n = 10000;
 
-        client myserver("127.0.0.1", 5000, 5000, crypto.fds);
+        vector<thread> thr;
+        for (uint i=0; i<n; i++) {
+            thr.push_back(thread([](uint a){
+                client myserver("127.0.0.1", 5000, 500);
+                string sends = "Hello world " + to_string(a);
+                myserver.push(sends);
+                cout << myserver.pull() << endl;                
+            }, i));
+        }
+
+        for (uint i=0; i<n; i++) {
+            thr[i].join();
+        } 
+
+        // secure crypto;
+        // cout << "init cert " << endl;
+
+        // client myserver("127.0.0.1", 5000, 5000, crypto.fds);
         // client myserver("localhost", 5000);
-        cout << "init client " << endl;
+        // cout << "init client " << endl;
 
 
-        string sends = "Hello world!";
-        cout << myserver.push(sends) << " " << sends.length() << endl;
-        cout << "wait client " << endl;
+        // string sends = "Hello world!";
+        // cout << myserver.push(sends) << " " << sends.length() << endl;
+        // cout << "wait client " << endl;
 
-        cout << myserver.pull();
+        // cout << myserver.pull();
 
     }
     catch (const string err) {
