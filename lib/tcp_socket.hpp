@@ -25,6 +25,8 @@ class client;
  * Server klasa za TCP/IP soket
  * Instanca se incijalizira kada pokrećemo server
 */
+// template<typename... Args>
+
 
 class server {
     public:
@@ -32,16 +34,17 @@ class server {
     struct sockaddr_in addr;
     SSL_CTX* securefds = NULL;
 
-    server (const ushort port, const uint limit = 1000, SSL_CTX* _securefds = NULL);
+    server (const ushort port, const uint queue = 1000, SSL_CTX* _securefds = NULL);
     ~server ();
 
     // one klijent
     client* cli = NULL;
-    void accept(const uint timeout = 100);   
+    // template<typename... Args>
+    void sync(const uint timeout = 100, void (*func)(Args ...vars));   
 
-    vector<thread> thr;
-    vector<client*> clis;
-    void asyncli(const uint limit, void (*handlecli)(client*) , const uint timeout = 100);
+    // vector<thread> thr;
+    // vector<client*> clis;
+    // void async(const uint limit, void (*handlecli)(Args ...args) , const uint timeout = 100);
 
 };
 

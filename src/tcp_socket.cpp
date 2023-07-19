@@ -4,9 +4,8 @@
  * Kontrustruktor varijable tipa server, prima port i limit za ograničenje liste klijenata na čekanju
 */
 
-server::server (const ushort port, const uint limit, SSL_CTX* _securefds) {
-    securefds = _securefds;         // dodati parametar red čekanja queue koji će se koristiti kao limit u socketu
-                                    // a stavrni limit ćemo korisitit kao broj threadova
+server::server (const ushort port, const uint queue, SSL_CTX* _securefds) {
+    securefds = _securefds;         
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -27,37 +26,42 @@ server::server (const ushort port, const uint limit, SSL_CTX* _securefds) {
         throw string("[ERROR] Unable to bind socket ");
     }
 
-    if (listen(sock, limit) < 0) {
+    if (listen(sock, queue) < 0) {
         throw string("[ERROR] It is not possible to set the allowed number of waiting clients ");
     }
 
 }
 
-void server::accept(const uint timeout) {
-    if (cli != NULL) {
-        cli->~client();
-        cli = NULL;
-    }
-    cli = new client(this, timeout, securefds);
-}
-
-
-void server::asyncli(const uint limit, void (*handlecli)(client*), const uint timeout) {
+template<typename... Args>
+void server::sync(const uint timeout, void (*func)(Args ...vars)) {
     do {
-        for (uint i=0; i<limit; i++) {
-            clis.push_back(new client(this, timeout, securefds));
-            thr.push_back(thread(handlecli, clis[clis.size()-1]));
+        if (cli != NULL) {
+            cli->~client();
+            cli = NULL;
         }
-
-        for (uint i=0; i<limit; i++) {
-            thr[i].join();
-            clis[i]->~client();
-        }
-        thr.clear();
-        clis.clear();
-
+        cli = new client(this, timeout, securefds);
+        // callback
+        func();
     } while (true);
 }
+
+// template<typename... Args>
+// void server::async(const uint limit, void (*handlecli)(Args ...args), const uint timeout) {
+//     do {
+//         for (uint i=0; i<limit; i++) {
+//             clis.push_back(new client(this, timeout, securefds));
+//             thr.push_back(thread(handlecli, args...));
+//         }
+
+//         for (uint i=0; i<limit; i++) {
+//             thr[i].join();
+//             clis[i]->~client();
+//         }
+//         thr.clear();
+//         clis.clear();
+
+//     } while (true);
+// }
 
 
 /**

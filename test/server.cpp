@@ -41,7 +41,13 @@ int main() {
 
 
         server myserver(5000, 100);
-        myserver.asyncli(8, [](client *cli) {
+        // myserver.async(8, [](client *cli) {
+        //     cout << "Klijent " << cli->ipv4 << endl;
+        //     string fromclient = cli->pull();
+        //     cout << "S klijenta " << fromclient << endl;
+        //     cli->push(fromclient);
+        // }, 200);
+        myserver.sync(8, [](client *cli) {
             cout << "Klijent " << cli->ipv4 << endl;
             string fromclient = cli->pull();
             cout << "S klijenta " << fromclient << endl;
