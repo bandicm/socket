@@ -5,7 +5,8 @@
 */
 
 server::server (const ushort port, const uint limit, SSL_CTX* _securefds) {
-    securefds = _securefds;
+    securefds = _securefds;         // dodati parametar red čekanja queue koji će se koristiti kao limit u socketu
+                                    // a stavrni limit ćemo korisitit kao broj threadova
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -33,14 +34,16 @@ server::server (const ushort port, const uint limit, SSL_CTX* _securefds) {
 }
 
 void server::accept(const uint timeout) {
+    if (cli != NULL) {
+        cli->~client();
+        cli = NULL;
+    }
     cli = new client(this, timeout, securefds);
 }
 
 
 void server::asyncli(const uint limit, void (*handlecli)(client*), const uint timeout) {
     do {
-        thr.clear();
-        clis.clear();
         for (uint i=0; i<limit; i++) {
             clis.push_back(new client(this, timeout, securefds));
             thr.push_back(thread(handlecli, clis[clis.size()-1]));
@@ -50,6 +53,8 @@ void server::asyncli(const uint limit, void (*handlecli)(client*), const uint ti
             thr[i].join();
             clis[i]->~client();
         }
+        thr.clear();
+        clis.clear();
 
     } while (true);
 }

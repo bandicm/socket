@@ -36,7 +36,7 @@ class server {
     ~server ();
 
     // one klijent
-    client* cli;
+    client* cli = NULL;
     void accept(const uint timeout = 100);   
 
     vector<thread> thr;
