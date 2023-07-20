@@ -32,36 +32,42 @@ server::server (const ushort port, const uint queue, SSL_CTX* _securefds) {
 
 }
 
-template<typename... Args>
-void server::sync(const uint timeout, void (*func)(Args ...vars)) {
+/**
+ * Metoda za sinkroni rad s klijentima, prima pokazivač na funkciju i timeout;
+ * Funkcija handlecli prima referencu tipa client - važno za definiranje funkcija koje se šalju;
+ * Nije moguće proslijediti druge parametre;
+*/
+
+void server::sync(void (*handlecli)(client&), const uint timeout) {
     do {
-        if (cli != NULL) {
-            cli->~client();
-            cli = NULL;
-        }
-        cli = new client(this, timeout, securefds);
-        // callback
-        func();
+        client cli(this, timeout, securefds);
+        handlecli(cli);
     } while (true);
 }
 
-// template<typename... Args>
-// void server::async(const uint limit, void (*handlecli)(Args ...args), const uint timeout) {
-//     do {
-//         for (uint i=0; i<limit; i++) {
-//             clis.push_back(new client(this, timeout, securefds));
-//             thr.push_back(thread(handlecli, args...));
-//         }
+/**
+ * Metoda za asinkdorni rad s klijentima, prima limit, pokazivač na funkciju i timeout;
+ * Funkcija handlecli prima referencu tipa client - važno za definiranje funkcija koje se šalju;
+ * Nije moguće proslijediti druge parametre;
+*/
 
-//         for (uint i=0; i<limit; i++) {
-//             thr[i].join();
-//             clis[i]->~client();
-//         }
-//         thr.clear();
-//         clis.clear();
+void server::async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout) {
+    mutex io;
+    do {
+        for (uint i=0; i<limit; i++) {
+            thr.push_back(thread([&](){
+                client cli(this, timeout, securefds);
+                handlecli(cli, io);
+            }));
+        }
 
-//     } while (true);
-// }
+        for (uint i=0; i<limit; i++) {
+            thr[i].join();
+        }
+        thr.clear();
+
+    } while (true);
+}
 
 
 /**
@@ -70,9 +76,6 @@ void server::sync(const uint timeout, void (*func)(Args ...vars)) {
 
 
 server::~server () {
-
-    cli->~client();
-    cli = NULL;
 
     if (sock<=0) {
         throw string("[ERROR] The socket is already closed "); 

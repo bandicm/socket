@@ -41,18 +41,27 @@ int main() {
 
 
         server myserver(5000, 100);
-        // myserver.async(8, [](client *cli) {
-        //     cout << "Klijent " << cli->ipv4 << endl;
-        //     string fromclient = cli->pull();
-        //     cout << "S klijenta " << fromclient << endl;
-        //     cli->push(fromclient);
-        // }, 200);
-        myserver.sync(8, [](client *cli) {
-            cout << "Klijent " << cli->ipv4 << endl;
-            string fromclient = cli->pull();
+        myserver.async(8, [](client &cli, mutex &io) {
+            cout << "Klijent " << cli.ipv4 << endl;
+            string fromclient = cli.pull();
+            io.lock();
             cout << "S klijenta " << fromclient << endl;
-            cli->push(fromclient);
+            io.unlock();
+            // fromclient += teststr;
+            cli.push(fromclient);
         }, 200);
+
+        // string teststr = " Idemooo";
+
+        // myserver.sync([](client &cli, mutex &io) {
+        //     cout << "Klijent " << cli.ipv4 << endl;
+        //     string fromclient = cli.pull();
+        //     io.lock();
+        //     cout << "S klijenta " << fromclient << endl;
+        //     io.unlock();
+        //     // fromclient += teststr;
+        //     cli.push(fromclient);
+        // });
 
     }
     catch(const string err) {

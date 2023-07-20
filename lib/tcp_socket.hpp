@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <mutex>
 #include <string.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -25,26 +26,19 @@ class client;
  * Server klasa za TCP/IP soket
  * Instanca se incijalizira kada pokrećemo server
 */
-// template<typename... Args>
-
 
 class server {
     public:
     int sock;
     struct sockaddr_in addr;
     SSL_CTX* securefds = NULL;
+    vector<thread> thr;
 
     server (const ushort port, const uint queue = 1000, SSL_CTX* _securefds = NULL);
     ~server ();
 
-    // one klijent
-    client* cli = NULL;
-    // template<typename... Args>
-    void sync(const uint timeout = 100, void (*func)(Args ...vars));   
-
-    // vector<thread> thr;
-    // vector<client*> clis;
-    // void async(const uint limit, void (*handlecli)(Args ...args) , const uint timeout = 100);
+    void sync(void (*handlecli)(client&), const uint timeout = 100);
+    void async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout = 100);
 
 };
 
