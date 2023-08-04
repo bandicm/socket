@@ -13,9 +13,11 @@
     #include <netdb.h>
     #include <unistd.h>
 #elif _WIN32
-    // #include <sstream>
     #include <WinSock.h>
     #include <ws2tcpip.h>
+    #pragma comment(lib,"ws2_32.lib")
+    #define ushort u_short
+    #define uint u_int
 #endif
 
 #include "ip.hpp"
@@ -34,7 +36,11 @@ class client;
 
 class server {
     public:
-    int sock;
+    #if __linux__
+        int sock;
+    #elif _WIN32
+        SOCKET sock;
+    #endif
     struct sockaddr_in addr;
     SSL_CTX* securefds = NULL;
 
@@ -70,7 +76,11 @@ class secure {
 class client {
     public:
     // zajedničke
-    int conn; // mijenja sock
+    #if __linux__
+        int conn; // mijenja sock
+    #elif _WIN32
+        SOCKET conn; // mijenja sock
+    #endif
     struct sockaddr_in addr;
     SSL* ssl = NULL;
     // server s klijentima

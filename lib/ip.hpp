@@ -4,9 +4,16 @@
 #include <iostream>
 #include <string>
 #include <string.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
+
+#if __linux__
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #include <unistd.h>
+#elif _WIN32
+    // #include <sstream>
+    #include <WinSock.h>
+    #include <ws2tcpip.h>
+#endif
 
 using namespace std;
 

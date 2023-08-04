@@ -9,7 +9,7 @@ int main() {
         cout << "init cert " << endl;
         secure crypto ("../example/cert.pem", "../example/privkey.pem");
         cout << "init server " << endl;
-        server myserver(5000, 100, crypto.fds);
+        server myserver(8000, 100, crypto.fds);
         
         cout << "init client " << endl;
 
@@ -23,7 +23,7 @@ int main() {
         // string fromclient =  myclient.pull();
         cout << "tell client " << fromclient << endl;
         // usleep(600*1000);
-        sleep(5);
+        //sleep(5);
         myserver.cli->push(fromclient);
         // myclient.push(fromclient);
         // myclient.~comming();
