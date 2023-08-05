@@ -7,11 +7,20 @@
 #include <thread>
 #include <mutex>
 #include <string.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#if __linux__
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #include <unistd.h>
+#elif _WIN32
+    #include <WinSock.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib,"ws2_32.lib")
+    #define ushort u_short
+    #define uint u_int
+#endif
 
 #include "ip.hpp"
 
@@ -29,7 +38,12 @@ class client;
 
 class server {
     public:
-    int sock;
+    #if __linux__
+        int sock;
+    #elif _WIN32
+        WSADATA wsa;
+        SOCKET sock;
+    #endif
     struct sockaddr_in addr;
     SSL_CTX* securefds = NULL;
     vector<thread> thr;
@@ -65,7 +79,12 @@ class secure {
 class client {
     public:
     // zajedničke
-    int conn; // mijenja sock
+    #if __linux__
+        int conn; // mijenja sock
+    #elif _WIN32
+        WSADATA wsa;
+        SOCKET conn; // mijenja sock
+    #endif
     struct sockaddr_in addr;
     SSL* ssl = NULL;
     // server s klijentima

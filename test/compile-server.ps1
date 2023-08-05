@@ -1,0 +1,1 @@
+g++ server.cpp ../src/* -o server.exe -lssl -lcrypto -lws2_32

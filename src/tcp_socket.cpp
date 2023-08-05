@@ -11,6 +11,12 @@ server::server (const ushort port, const uint queue, SSL_CTX* _securefds) {
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
 
+    #if _WIN32
+        if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
+            throw string("[ERROR] WSA Startup. Detail: " + to_string(WSAGetLastError()));
+        }
+    #endif
+
     sock = socket(AF_INET, SOCK_STREAM, 0); 
     if (sock <= 0) {  
         throw string("[ERROR] Unable to open TCP socket ");
@@ -18,9 +24,16 @@ server::server (const ushort port, const uint queue, SSL_CTX* _securefds) {
     }
 
     int opt=1;
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        throw string("[ERROR] Unable to set REUSEADDR or REUSEPORT on socket ");
-    }
+    #if __linux__
+        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+            throw string("[ERROR] Unable to set REUSEADDR or REUSEPORT on socket ");
+        }
+    #elif _WIN32
+        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt))) {
+            throw string("[ERROR] Unable to set REUSEADDR or REUSEPORT on socket ");
+        }
+    #endif
+    
 
     if (bind(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
         throw string("[ERROR] Unable to bind socket ");
@@ -81,10 +94,21 @@ server::~server () {
         throw string("[ERROR] The socket is already closed "); 
     }
 
-    else if (close(sock) != 0) {
-        throw string("[ERROR] Unable to close socket ");
-    }
+    else {
 
+        #if __linux__
+            if (close(sock) != 0) {
+                throw string("[ERROR] Unable to close socket ");
+            }
+        #elif _WIN32
+            if (closesocket(sock) != 0) {
+                throw string("[ERROR] Unable to close socket ");
+            }
+            WSACleanup();
+        #endif
+
+
+    }
 }
 
 /**
@@ -149,6 +173,12 @@ secure::~secure () {
 
 client::client(const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
 
+    #if _WIN32
+        if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
+            throw string("[ERROR] Unable to set WinSock " + to_string(WSAGetLastError()));
+        }
+    #endif
+
     conn = socket(AF_INET, SOCK_STREAM, 0);
 	if (conn < 0) {
         throw string("[ERROR] Unable to open TCP socket ");
@@ -164,13 +194,20 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
         throw string("Unable to connect to server ");
     }
 
-    struct timeval tv;
-    tv.tv_sec = timeout/1000;
-    tv.tv_usec = (timeout%1000)*1000;
+    #if __linux__
+        struct timeval tv;
+        tv.tv_sec = timeout/1000;
+        tv.tv_usec = (timeout%1000)*1000;
 
-    if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
-        throw string("[ERROR] Unable to set timeout ");
-    }
+        if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
+            throw string("[ERROR] Unable to set timeout ");
+        }
+    #elif _WIN32
+        DWORD tv = timeout;
+        if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv))) {
+            throw string("[ERROR] Unable to set timeout ");
+        }
+    #endif
 
     if (securefds) {
         ssl = SSL_new(securefds);
@@ -205,13 +242,23 @@ client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
         throw string("[ERROR] Unable to accept client connection ");
     }
 
-    struct timeval tv;
-    tv.tv_sec = timeout/1000;
-    tv.tv_usec = (timeout%1000)*1000;
+    #if __linux__
+        struct timeval tv;
+        tv.tv_sec = timeout/1000;
+        tv.tv_usec = (timeout%1000)*1000;
 
-    if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
-        throw string("[ERROR] Unable to set timeout ");
-    }
+        if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
+            throw string("[ERROR] Unable to set timeout ");
+        }
+    #elif _WIN32
+        DWORD tv = timeout;
+
+        if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv))) {
+            throw string("[ERROR] Unable to set timeout ");
+        }
+    #endif
+
+    
 
 
     if (securefds) {
@@ -255,8 +302,17 @@ client::~client () {
         throw string("[ERROR] The socket is already closed "); 
     }
 
-    else if (close(conn) != 0) {
-        throw string("[ERROR] Unable to close socket ");
+    else {
+        #if __linux__
+            if (close(conn) != 0) {
+                throw string("[ERROR] Unable to close socket ");
+            }
+        #elif _WIN32
+            if (closesocket(conn) != 0) {
+                throw string("[ERROR] Unable to close socket ");
+            }
+            //WSACleanup();
+        #endif
     }
 
 }
@@ -274,7 +330,7 @@ bool client::push (const string msg) {
        sended = SSL_write(ssl, msg.c_str(), msg.length());
     }
     else {
-        sended = write(conn, msg.c_str(), msg.length());
+        sended = send(conn, msg.c_str(), msg.length(), 0);
     }
     return sended == msg.length();
 }
@@ -292,7 +348,7 @@ string client::pull (size_t byte_limit) {
         SSL_read(ssl, res, byte_limit);
     }
     else {
-        read(conn , res, byte_limit);
+        recv(conn , res, byte_limit, 0);
     }
 
     return string(res);
