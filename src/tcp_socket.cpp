@@ -12,7 +12,6 @@ server::server (const ushort port, const uint limit, SSL_CTX* _securefds) {
     addr.sin_port = htons(port);
 
     #if _WIN32
-        WSADATA wsa;
         if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
             throw string("[ERROR] WSA Startup. Detail: " + to_string(WSAGetLastError()));
         }
@@ -144,7 +143,6 @@ secure::~secure () {
 client::client(const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
 
     #if _WIN32
-        WSADATA wsa;
         if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
             throw string("[ERROR] Unable to set WinSock " + to_string(WSAGetLastError()));
         }
@@ -179,9 +177,6 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
             throw string("[ERROR] Unable to set timeout ");
         }
     #endif
-
-
-    
 
     if (securefds) {
         ssl = SSL_new(securefds);

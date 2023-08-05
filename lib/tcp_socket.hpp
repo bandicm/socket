@@ -39,6 +39,7 @@ class server {
     #if __linux__
         int sock;
     #elif _WIN32
+        WSADATA wsa;
         SOCKET sock;
     #endif
     struct sockaddr_in addr;
@@ -79,6 +80,7 @@ class client {
     #if __linux__
         int conn; // mijenja sock
     #elif _WIN32
+        WSADATA wsa;
         SOCKET conn; // mijenja sock
     #endif
     struct sockaddr_in addr;
