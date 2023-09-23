@@ -10,10 +10,10 @@ int main() {
         // secure crypto ("../example/cert.pem", "../example/privkey.pem");
         // cout << "init server " << endl;
         // server myserver(5000, 100, crypto.fds);
-        cout << "init cert " << endl;
-        secure crypto ("../example/cert.pem", "../example/privkey.pem");
-        cout << "init server " << endl;
-        server myserver(8000, 100, crypto.fds);
+        // cout << "init cert " << endl;
+        // secure crypto ("../example/cert.pem", "../example/privkey.pem");
+        // cout << "init server " << endl;
+        // server myserver(8000, 100, crypto.fds);
         
         // cout << "init client " << endl;
 
@@ -29,12 +29,12 @@ int main() {
         // // usleep(600*1000);
         // sleep(5);
         // myserver.cli->push(fromclient);
-        string fromclient =  myserver.cli->pull();
+        // string fromclient =  myserver.cli->pull();
         // string fromclient =  myclient.pull();
-        cout << "tell client " << fromclient << endl;
+        // cout << "tell client " << fromclient << endl;
         // usleep(600*1000);
         //sleep(5);
-        myserver.cli->push(fromclient);
+        // myserver.cli->push(fromclient);
         // myclient.push(fromclient);
         // myclient.~comming();
 
@@ -49,8 +49,9 @@ int main() {
 
         // sleep(80);
 
-
+        cout << "init server " << endl;
         server myserver(5000, 100);
+        cout << "init client " << endl;
         myserver.async(8, [](client &cli, mutex &io) {
             cout << "Klijent " << cli.ipv4 << endl;
             string fromclient = cli.pull();
@@ -63,12 +64,10 @@ int main() {
 
         // string teststr = " Idemooo";
 
-        // myserver.sync([](client &cli, mutex &io) {
+        // myserver.sync([](client &cli) {
         //     cout << "Klijent " << cli.ipv4 << endl;
         //     string fromclient = cli.pull();
-        //     io.lock();
         //     cout << "S klijenta " << fromclient << endl;
-        //     io.unlock();
         //     // fromclient += teststr;
         //     cli.push(fromclient);
         // });

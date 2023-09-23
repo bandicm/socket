@@ -6,11 +6,11 @@
             "command": "/usr/bin/g++",
             "args": [
                 "-g",
-                "${fileDirname}/client.cpp",
+                "${fileDirname}/server.cpp",
                 "${fileDirname}/../src/*.cpp",
                 // "${fileDirname}../include/*/src/*.cpp",
                 "-o",
-                "${fileDirname}/client.o",
+                "${fileDirname}/server.o",
                 "-lssl",
                 "-lcrypto"
             ],

@@ -324,15 +324,28 @@ client::~client () {
 */
 
 
-bool client::push (const string msg) {
-    size_t sended = 0;
-    if (ssl) {
-       sended = SSL_write(ssl, msg.c_str(), msg.length());
+bool client::push(const string msg) {
+    size_t total_sent = 0;
+    size_t msg_length = msg.length();
+
+    while (total_sent < msg_length) {
+        size_t sent = 0;
+
+        if (ssl) {
+            sent = SSL_write(ssl, msg.c_str() + total_sent, msg_length - total_sent);
+        } else {
+            sent = send(conn, msg.c_str() + total_sent, msg_length - total_sent, 0);
+        }
+
+        if (sent == -1) {
+            // Greška pri slanju poruke
+            return false;
+        }
+
+        total_sent += sent;
     }
-    else {
-        sended = send(conn, msg.c_str(), msg.length(), 0);
-    }
-    return sended == msg.length();
+
+    return true;
 }
 
 /**
@@ -341,18 +354,29 @@ bool client::push (const string msg) {
  * Vraća string primljene poruke
 */
 
-string client::pull (size_t byte_limit) {
-   char res[byte_limit] = {0};
+string client::pull(size_t byte_limit) {
+    char res[byte_limit] = {0};
+    size_t total_received = 0;
 
-    if (ssl) {
-        SSL_read(ssl, res, byte_limit);
-    }
-    else {
-        recv(conn , res, byte_limit, 0);
+    while (total_received < byte_limit) {
+        ssize_t received = 0;
+
+        if (ssl) {
+            received = SSL_read(ssl, res + total_received, byte_limit - total_received);
+        } else {
+            received = recv(conn, res + total_received, byte_limit - total_received, 0);
+        }
+
+        if (received == -1) {
+            // Greška pri primanju poruke
+            break;
+        } else if (received == 0) {
+            // Veza je prekinuta
+            break;
+        }
+
+        total_received += received;
     }
 
     return string(res);
 }
-
-
-
