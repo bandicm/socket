@@ -9,21 +9,30 @@ int main() {
 
     try {
 
-        uint n = 10000;
+        // uint n = 10000;
 
-        vector<thread> thr;
-        for (uint i=0; i<n; i++) {
-            thr.push_back(thread([](uint a){
-                client myserver("127.0.0.1", 5000, 500);
-                string sends = "Hello world " + to_string(a);
-                myserver.push(sends);
-                cout << myserver.pull() << endl;                
-            }, i));
+        // vector<thread> thr;
+        // for (uint i=0; i<n; i++) {
+        //     thr.push_back(thread([](uint a){
+        //         client myserver("127.0.0.1", 5000, 500);
+        //         string sends = "Hello world " + to_string(a);
+        //         myserver.push(sends);
+        //         cout << myserver.pull() << endl;                
+        //     }, i));
+        // }
+
+        // for (uint i=0; i<n; i++) {
+        //     thr[i].join();
+        // } 
+
+        uint i = 0;
+        client mycli("localhost", 5000);
+
+        while (true) {
+            mycli.push("Helllo " + to_string(i++));
+            cout << mycli.pull() << endl;
+            usleep(10000);
         }
-
-        for (uint i=0; i<n; i++) {
-            thr[i].join();
-        } 
 
         // secure crypto;
         // cout << "init cert " << endl;

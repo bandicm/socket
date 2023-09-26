@@ -1,1 +1,1 @@
-g++ server.cpp ../src/* -o server.o -lssl -lcrypto
+g++ server.cpp ../src/* -o server.o -lssl -lcrypto -lpthread

@@ -49,16 +49,28 @@ int main() {
 
         // sleep(80);
 
-        cout << "init server " << endl;
+        // cout << "init server " << endl;
+        // server myserver(5000, 100);
+        // cout << "init client " << endl;
+        // myserver.async(8, [](client &cli, mutex &io) {
+        //     cout << "Klijent " << cli.ipv4 << endl;
+        //     string fromclient = cli.pull();
+        //     io.lock();
+        //     cout << "S klijenta " << fromclient << endl;
+        //     io.unlock();
+        //     // fromclient += teststr;
+        //     cli.push(fromclient);
+        // }, 200);
+
         server myserver(5000, 100);
-        cout << "init client " << endl;
-        myserver.async(8, [](client &cli, mutex &io) {
+        myserver.pool(10, [](client &cli, mutex &io) {
             cout << "Klijent " << cli.ipv4 << endl;
             string fromclient = cli.pull();
-            io.lock();
+            // io.lock();
             cout << "S klijenta " << fromclient << endl;
-            io.unlock();
+            // io.unlock();
             // fromclient += teststr;
+            usleep(10000);
             cli.push(fromclient);
         }, 200);
 

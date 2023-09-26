@@ -53,6 +53,7 @@ class server {
 
     void sync(void (*handlecli)(client&), const uint timeout = 100);
     void async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout = 100);
+    void pool(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout = 100);
 
 };
 
@@ -100,6 +101,27 @@ class client {
     ~client ();
     bool push (const string msg);
     string pull (size_t byte_limit = 1024);
+
+    /**
+     * ustvari ne znam jel konekcija aktivna
+     * kod za connect i disconnect je konstruktoru - destruktoru
+    */
+};
+
+
+class Pool {
+    public:
+    uint numcli;
+    vector<pair<mutex*, client*>> drops;
+
+    // konstruktor za klijente bez servera
+    Pool (const uint _numcli, const string address, const ushort port, const uint timeout = 100, SSL_CTX* securefds = NULL);
+    // konstruktor za klijente sa serverom
+    Pool (const server *_srv, const uint _numcli, const uint timeout = 100, SSL_CTX* securefds = NULL);
+    ~Pool();
+
+    void run();
+
 };
 
 #endif

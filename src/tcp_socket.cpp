@@ -380,3 +380,40 @@ string client::pull(size_t byte_limit) {
 
     return string(res);
 }
+
+
+Pool::Pool(const uint _numcli, const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
+    if (_numcli > 1 ) {
+        numcli = _numcli;
+    }
+    else {
+        throw string("[ERROR] Invalid number of instances in pool ");
+    }
+
+    for (uint i=0; i<numcli; i++) {
+        drops.push_back(make_pair(new mutex, new client(address, port, timeout, securefds)));
+    }
+
+}
+
+
+Pool::Pool(const server *_srv, const uint _numcli, const uint timeout = 100, SSL_CTX* securefds = NULL) {
+    if (_numcli > 1 ) {
+        numcli = _numcli;
+    }
+    else {
+        throw string("[ERROR] Invalid number of instances in pool ");
+    }
+
+    for (uint i=0; i<numcli; i++) {
+        drops.push_back(make_pair(new mutex, new client(_srv, timeout, securefds)));
+    }
+}
+
+
+Pool::~Pool() {
+    
+    numcli = 0;
+    drops.clear();
+
+}
