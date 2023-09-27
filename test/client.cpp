@@ -27,22 +27,75 @@ int main() {
         //     thr[i].join();
         // } 
 
-        uint i = 0;
+        // uint i = 0;
 
-        auto t1 = high_resolution_clock::now();
-        client mycli("localhost", 7000);
-        auto t2 = high_resolution_clock::now();
-        cout << "Connected: " << duration_cast<microseconds>(t2 - t1).count() << endl;
+        // auto t1 = high_resolution_clock::now();
+        // client mycli("localhost", 7000);
+        // auto t2 = high_resolution_clock::now();
+        // cout << "Connected: " << duration_cast<microseconds>(t2 - t1).count() << endl;
 
-        while (true) {
-            sleep(4);
-            mycli.push("Helllo " + to_string(i++));
-            cout << "> " << mycli.pull() << endl;
-            auto t3 = high_resolution_clock::now();
-            cout << "Sending and recive: " << duration_cast<microseconds>(t3 - t2).count() << endl;
-            // usleep(10000);
-            sleep(1);
-        }
+        // while (true) {
+        //     t2 = high_resolution_clock::now();
+        //     mycli.push("Helllo " + to_string(i++));
+        //     cout << "> " << mycli.pull() << endl;
+        //     auto t3 = high_resolution_clock::now();
+        //     cout << "Sending and recive: " << duration_cast<microseconds>(t3 - t2).count() << endl;
+        //     // usleep(10000);
+        // }
+
+        clientPool clies(5, "localhost", 7000);
+
+        thread t1([&]() {
+            int i = 0;
+            while (true) {
+                auto t1 = high_resolution_clock::now();
+                auto socks = clies.pickup();
+                auto t2 = high_resolution_clock::now();
+                cout << "Picking : " << duration_cast<microseconds>(t2 - t1).count() << endl;
+                socks->second->push("Helllo I " + to_string(i++));
+                cout << "> " << socks->second->pull() << endl;
+                auto t3 = high_resolution_clock::now();
+                cout << "Sending and recive: " << duration_cast<microseconds>(t3 - t2).count() << endl;
+                clies.release(socks);
+            }
+        });
+
+
+        thread t2([&]() {
+            int i = 0;
+            while (true) {
+                auto t1 = high_resolution_clock::now();
+                auto socks = clies.pickup();
+                auto t2 = high_resolution_clock::now();
+                cout << "Picking : " << duration_cast<microseconds>(t2 - t1).count() << endl;
+                socks->second->push("Helllo II " + to_string(i++));
+                cout << "> " << socks->second->pull() << endl;
+                auto t3 = high_resolution_clock::now();
+                cout << "Sending and recive: " << duration_cast<microseconds>(t3 - t2).count() << endl;
+                clies.release(socks);
+            }
+        });
+
+
+        thread t3([&]() {
+            int i = 0;
+            while (true) {
+                auto t1 = high_resolution_clock::now();
+                auto socks = clies.pickup();
+                auto t2 = high_resolution_clock::now();
+                cout << "Picking : " << duration_cast<microseconds>(t2 - t1).count() << endl;
+                socks->second->push("Helllo III " + to_string(i++));
+                cout << "> " << socks->second->pull() << endl;
+                auto t3 = high_resolution_clock::now();
+                cout << "Sending and recive: " << duration_cast<microseconds>(t3 - t2).count() << endl;
+                clies.release(socks);
+            }
+        });
+
+
+        t1.join();
+        t2.join();
+        t3.join();
 
         // secure crypto;
         // cout << "init cert " << endl;

@@ -66,20 +66,28 @@ void server::sync(void (*handlecli)(client&), const uint timeout) {
 
 void server::async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout) {
     mutex io;
-    do {
+   // do {
         for (uint i=0; i<limit; i++) {
             thr.push_back(thread([&](){
-                client cli(this, timeout, securefds);
-                handlecli(cli, io);
+                client *cli = new client(this, timeout, securefds);
+                while (true) {
+                    try {
+                        handlecli(*cli, io);
+                    } catch (const string err) {
+                        cout << err << endl;
+                        cli->~client();
+                        cli = new client(this, timeout, securefds);
+                    }
+                }
             }));
         }
 
         for (uint i=0; i<limit; i++) {
             thr[i].join();
         }
-        thr.clear();
+        // thr.clear();
 
-    } while (true);
+    // } while (true);
 }
 
 
@@ -112,9 +120,15 @@ void server::asyncPool(const uint limit, void (*handlecli)(client&), const uint 
 
     for (uint i=0; i<limit; i++) {
         thr.push_back(thread( [&]() {
+            pair<mutex*, client*>* cli = clipool.pickup();
             while (true) {
-                pair<mutex*, client*>* cli = clipool.pickup();
-                handlecli(*(cli->second));
+                try {
+                    handlecli(*(cli->second));                
+                } catch (const string err) {
+                    cout << err << endl;
+                    cli->second->~client();
+                    cli->second = new client(this, timeout, securefds);
+                }
                 clipool.release(cli);
             }
         }));
@@ -420,7 +434,7 @@ string client::pull(size_t byte_limit) {
             break;
         } else if (received == 0) {
             // Veza je prekinuta  - treba pozvati destruktor
-            cout << "Destruktor " << endl;
+            // cout << "Destruktor " << endl;
             // this->~client();
             throw string("[WARNING] Socket closed remotely");
             break;

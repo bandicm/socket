@@ -80,19 +80,10 @@ int main() {
 
         myserver.async(4, [](client &cli, mutex &io) { 
             while (true) {
-                try {
-                    string fromclient = cli.pull();
-                    cout << "> " << fromclient << endl;
-                    // fromclient += teststr;
-                    cli.push(fromclient);
-                } catch (const string err) {
-                    cout << err << endl;
-                    try {
-                        cli.reconnect();
-                    } catch (const string err) {
-                        cout << err << endl;
-                    }
-                }
+                string fromclient = cli.pull();
+                cout << "> " << fromclient << endl;
+                // fromclient += teststr;
+                cli.push(fromclient);
             }
         });
 
