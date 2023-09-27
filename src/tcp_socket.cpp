@@ -83,6 +83,53 @@ void server::async(const uint limit, void (*handlecli)(client&, mutex&), const u
 }
 
 
+
+/**
+ * 
+*/
+
+/**
+ * Metoda za sinkroni rad s klijentima, prima pokazivač na funkciju i timeout;
+ * Funkcija handlecli prima referencu tipa client - važno za definiranje funkcija koje se šalju;
+ * Nije moguće proslijediti druge parametre;
+*/
+
+// void server::syncPool(void (*handlecli)(client&), const uint timeout) {
+//     do {
+//         client cli(this, timeout, securefds);
+//         handlecli(cli);
+//     } while (true);
+// }
+
+/**
+ * Metoda za asinkdorni rad s klijentima, prima limit, pokazivač na funkciju i timeout;
+ * Funkcija handlecli prima referencu tipa client - važno za definiranje funkcija koje se šalju;
+ * Nije moguće proslijediti druge parametre;
+*/
+
+void server::asyncPool(const uint limit, void (*handlecli)(client&), const uint timeout) {
+    clientPool clipool(this, limit, timeout, securefds);
+
+    for (uint i=0; i<limit; i++) {
+        thr.push_back(thread( [&]() {
+            while (true) {
+                pair<mutex*, client*>* cli = clipool.pickup();
+                handlecli(*(cli->second));
+                clipool.release(cli);
+            }
+        }));
+    }
+
+    for (uint i=0; i<limit; i++) {
+        thr[i].join();
+    }
+    thr.clear();
+
+}
+
+
+
+
 /**
  * Destruktor varijable tipa server
 */
@@ -369,9 +416,13 @@ string client::pull(size_t byte_limit) {
 
         if (received == -1) {
             // Greška pri primanju poruke
+            cout << "Da vidim jel ovdje kad nije poslo " << endl;
             break;
         } else if (received == 0) {
-            // Veza je prekinuta
+            // Veza je prekinuta  - treba pozvati destruktor
+            cout << "Destruktor " << endl;
+            // this->~client();
+            throw string("[WARNING] Socket closed remotely");
             break;
         }
 
@@ -381,8 +432,111 @@ string client::pull(size_t byte_limit) {
     return string(res);
 }
 
+bool client::reconnect() {
+    if (_address.empty() && srv != NULL) {
+        // srv = _srv;
+        socklen_t len = sizeof(struct sockaddr_in);
 
-Pool::Pool(const uint _numcli, const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
+        if ((conn = accept(srv->sock, (struct sockaddr *)&(srv->addr), (socklen_t*)&len)) < 0) {
+            throw string("[ERROR] Unable to accept client connection ");
+        }
+
+        #if __linux__
+            struct timeval tv;
+            tv.tv_sec = _timeout/1000;
+            tv.tv_usec = (_timeout%1000)*1000;
+
+            if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
+                throw string("[ERROR] Unable to set timeout ");
+            }
+        #elif _WIN32
+            DWORD tv = timeout;
+
+            if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv))) {
+                throw string("[ERROR] Unable to set timeout ");
+            }
+        #endif
+
+        
+
+
+        if (_securefds) {
+            ssl = SSL_new(_securefds);
+            if (!ssl) {
+                throw string("[ERROR] Creating SSL object ");
+            }
+            SSL_set_fd(ssl, conn);
+
+            // Perform SSL handshake
+            if (SSL_accept(ssl) <= 0) {
+                SSL_free(ssl);
+                throw string("[ERROR] Performing SSL handshake ");
+            }
+        }    
+
+        char ipv4_buff[INET_ADDRSTRLEN];
+        char ipv6_buff[INET6_ADDRSTRLEN];
+
+        inet_ntop(AF_INET, &(srv->addr.sin_addr), ipv4_buff, INET_ADDRSTRLEN);
+        ipv4 = ipv4_buff;
+        inet_ntop(AF_INET6, &(srv->addr.sin_addr), ipv6_buff, INET6_ADDRSTRLEN);
+        ipv6 = ipv6_buff;
+    }
+    else {
+        
+        #if _WIN32
+            if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
+                throw string("[ERROR] Unable to set WinSock " + to_string(WSAGetLastError()));
+            }
+        #endif
+
+        conn = socket(AF_INET, SOCK_STREAM, 0);
+        if (conn < 0) {
+            throw string("[ERROR] Unable to open TCP socket ");
+        }
+
+        const string _address = isIPAddress(_address) ? _address : ipFromDomain(_address);
+
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = inet_addr(_address.c_str());
+        addr.sin_port = htons(_port);
+
+        if (connect(conn, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) != 0) {
+            throw string("Unable to connect to server ");
+        }
+
+        #if __linux__
+            struct timeval tv;
+            tv.tv_sec = _timeout/1000;
+            tv.tv_usec = (_timeout%1000)*1000;
+
+            if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
+                throw string("[ERROR] Unable to set timeout ");
+            }
+        #elif _WIN32
+            DWORD tv = timeout;
+            if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv))) {
+                throw string("[ERROR] Unable to set timeout ");
+            }
+        #endif
+
+        if (_securefds) {
+            ssl = SSL_new(_securefds);
+            if (!ssl) {
+                throw string("[ERROR] Creating SSL object ");
+            }
+            SSL_set_fd(ssl, conn);
+
+            // Perform the SSL handshake
+            if (SSL_connect(ssl) <= 0) {
+                SSL_free(ssl);
+                throw string("[ERROR] Performing SSL handshake ");
+            }
+        }
+    }
+}
+
+clientPool::clientPool(const uint _numcli, const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
     if (_numcli > 1 ) {
         numcli = _numcli;
     }
@@ -397,7 +551,7 @@ Pool::Pool(const uint _numcli, const string address, const ushort port, const ui
 }
 
 
-Pool::Pool(const server *_srv, const uint _numcli, const uint timeout = 100, SSL_CTX* securefds = NULL) {
+clientPool::clientPool(const server *_srv, const uint _numcli, const uint timeout, SSL_CTX* securefds) {
     if (_numcli > 1 ) {
         numcli = _numcli;
     }
@@ -406,12 +560,33 @@ Pool::Pool(const server *_srv, const uint _numcli, const uint timeout = 100, SSL
     }
 
     for (uint i=0; i<numcli; i++) {
+        cout << "init clients " << i << endl;
         drops.push_back(make_pair(new mutex, new client(_srv, timeout, securefds)));
     }
 }
 
 
-Pool::~Pool() {
+pair<mutex*, client*>* clientPool::pickup() {
+    cout << "Uzimam clienta " << endl;
+    lock_guard<mutex> master(io);
+    while (true) {
+        for (uint i=0; i<drops.size(); i++) {
+    cout << "Pokušavam s  " << i << endl;
+
+            if (drops[i].first->try_lock()) {
+    cout << "Odabrao sam " << i << endl;
+
+                return &drops[i];
+            }
+        }
+    }
+}
+
+void clientPool::release(pair<mutex*, client*>* drop) {
+    drop->first->unlock();
+}
+
+clientPool::~clientPool() {
     
     numcli = 0;
     drops.clear();

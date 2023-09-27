@@ -53,7 +53,9 @@ class server {
 
     void sync(void (*handlecli)(client&), const uint timeout = 100);
     void async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout = 100);
-    void pool(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout = 100);
+    // void syncPool(void (*handlecli)(client&), const uint timeout = 100);
+    void asyncPool(const uint limit, void (*handlecli)(client&), const uint timeout = 100);
+
 
 };
 
@@ -88,8 +90,12 @@ class client {
     #endif
     struct sockaddr_in addr;
     SSL* ssl = NULL;
+    string _address;
+    ushort _port;
+    uint _timeout; 
+    SSL_CTX* _securefds = NULL;
     // server s klijentima
-    const server* srv;
+    const server* srv = NULL;
     // klijent sa serverom
     string ipv4;
     string ipv6;
@@ -101,6 +107,7 @@ class client {
     ~client ();
     bool push (const string msg);
     string pull (size_t byte_limit = 1024);
+    bool reconnect();
 
     /**
      * ustvari ne znam jel konekcija aktivna
@@ -109,18 +116,20 @@ class client {
 };
 
 
-class Pool {
+class clientPool {
     public:
+    mutex io;
     uint numcli;
     vector<pair<mutex*, client*>> drops;
 
     // konstruktor za klijente bez servera
-    Pool (const uint _numcli, const string address, const ushort port, const uint timeout = 100, SSL_CTX* securefds = NULL);
+    clientPool (const uint _numcli, const string address, const ushort port, const uint timeout = 100, SSL_CTX* securefds = NULL);
     // konstruktor za klijente sa serverom
-    Pool (const server *_srv, const uint _numcli, const uint timeout = 100, SSL_CTX* securefds = NULL);
-    ~Pool();
+    clientPool (const server *_srv, const uint _numcli, const uint timeout = 100, SSL_CTX* securefds = NULL);
+    ~clientPool();
 
-    void run();
+    pair<mutex*, client*>* pickup();
+    void release(pair<mutex*, client*>* drop);
 
 };
 

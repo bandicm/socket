@@ -62,27 +62,42 @@ int main() {
         //     cli.push(fromclient);
         // }, 200);
 
-        server myserver(5000, 100);
-        myserver.pool(10, [](client &cli, mutex &io) {
-            cout << "Klijent " << cli.ipv4 << endl;
-            string fromclient = cli.pull();
-            // io.lock();
-            cout << "S klijenta " << fromclient << endl;
-            // io.unlock();
-            // fromclient += teststr;
-            usleep(10000);
-            cli.push(fromclient);
-        }, 200);
+        server myserver(7000, 100);
+        // myserver.asyncPool(10, [](client &cli) {
+        //     cout << "Klijent " << cli.ipv4 << endl;
+        //     string fromclient = cli.pull();
+        //     // io.lock();
+        //     cout << "S klijenta " << fromclient << endl;
+        //     // io.unlock();
+        //     // fromclient += teststr;
+        //     usleep(10000);
+        //     cli.push(fromclient);
+        // }, 200);
+
+
 
         // string teststr = " Idemooo";
 
-        // myserver.sync([](client &cli) {
-        //     cout << "Klijent " << cli.ipv4 << endl;
-        //     string fromclient = cli.pull();
-        //     cout << "S klijenta " << fromclient << endl;
-        //     // fromclient += teststr;
-        //     cli.push(fromclient);
-        // });
+        myserver.async(4, [](client &cli, mutex &io) { 
+            while (true) {
+                try {
+                    string fromclient = cli.pull();
+                    cout << "> " << fromclient << endl;
+                    // fromclient += teststr;
+                    cli.push(fromclient);
+                } catch (const string err) {
+                    cout << err << endl;
+                    try {
+                        cli.reconnect();
+                    } catch (const string err) {
+                        cout << err << endl;
+                    }
+                }
+            }
+        });
+
+
+
 
     }
     catch(const string err) {
