@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <deque>
 #include <thread>
 #include <mutex>
 #include <string.h>
@@ -101,5 +102,30 @@ class client {
     bool push (const string msg);
     string pull (size_t byte_limit = 1024);
 };
+
+
+class queue { // FIFO
+    public:
+    mutex io;
+    uint limit;
+    string address;
+    ushort port;
+    uint timeout;
+    server *srv = NULL;
+    SSL_CTX* securefds = NULL;
+
+    deque<client*> clients;
+    thread controller;
+
+    queue (const uint _limit, const string _address, const ushort _port, const uint _timeout = 100, SSL_CTX* _securefds = NULL);
+    queue (const uint _limit, server *_srv, const uint _timeout = 100, SSL_CTX* _securefds = NULL);
+
+    ~queue();
+
+    void enqueue();
+    client dequeue();
+
+};
+
 
 #endif

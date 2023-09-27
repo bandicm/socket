@@ -258,9 +258,6 @@ client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
         }
     #endif
 
-    
-
-
     if (securefds) {
         ssl = SSL_new(securefds);
         if (!ssl) {
@@ -356,3 +353,168 @@ string client::pull (size_t byte_limit) {
 
 
 
+queue::queue (const uint _limit, const string _address, const ushort _port, const uint _timeout, SSL_CTX* _securefds) {
+
+    if (_limit > 1) {
+        limit = _limit;
+    }
+    else {
+        throw string("[ERROR] Limit out of range ");
+    }
+
+    address = _address;
+    port = _port;
+    timeout = _timeout;
+    securefds = _securefds;
+    
+
+    // for (uint i=0; i<limit; i++) {
+
+    //     if (address.empty() && srv != NULL) {
+    //         clients.push_back(new client(srv, timeout, securefds));
+    //     }
+    //     else {
+    //         clients.push_back(new client(address, port, timeout, securefds));
+    //     }
+    // }
+
+    // controller = thread([&](){
+    //     cout << "Upao u tred "<< endl;
+    //     while(true) {
+    //         // io.lock();
+    //         // uint missing = limit-clients.size();
+    //         // cout << "nedostaje " << missing << endl;
+    //         // if (missing > 0.6*limit) {
+    //             // enqueue();
+    //         if (clients.size() <= 1) {
+    //             if (address.empty() && srv != NULL) {
+    //                 clients.push_back(new client(srv, timeout, securefds));
+    //             }
+    //             else {
+    //                 clients.push_back(new client(address, port, timeout, securefds));
+    //             }
+    //         }
+    //         // }
+    //         // usleep(missing*100000);
+    //         // io.unlock();
+    //         // usleep(1000);
+    //         sleep(1);
+
+    //     }
+    // });
+
+}
+
+
+
+queue::queue (const uint _limit, server *_srv, const uint _timeout, SSL_CTX* _securefds) {
+    if (_limit > 1) {
+        limit = _limit;
+    }
+    else {
+        throw string("[ERROR] Limit out of range ");
+    }
+
+    srv = _srv;
+    timeout = _timeout;
+    securefds = _securefds;
+
+    controller = thread([this](){
+        cout << "Upao u tred "<< endl;
+        while(true) {
+            io.lock();
+            // uint missing = limit-clients.size();
+            // cout << "nedostaje " << missing << endl;
+            // if (missing > 0.6*limit) {
+                // enqueue();
+            if (clients.size()< limit) {
+                if (address.empty() && srv != NULL) {
+                    clients.push_back(new client(srv, timeout, securefds));
+                }
+                else {
+                    clients.push_back(new client(address, port, timeout, securefds));
+                }
+            }
+            // }
+            // usleep(missing*100000);
+            io.unlock();
+            // usleep(1000);
+        }
+    });
+
+}
+
+void queue::enqueue () {
+    vector<thread> worker;
+    lock_guard<mutex> master(io);
+
+    for (uint i=0; i<limit-clients.size(); i++) {
+        cout << "idemo dodati klijente " << endl;
+        worker.push_back(thread([&](){
+            if (address.empty() && srv != NULL) {
+                clients.push_back(new client(srv, timeout, securefds));
+            }
+            else {
+                cout << "dodajem " << i << endl;
+                clients.push_back(new client(address, port, timeout, securefds));
+            }
+        }));
+    }
+
+    for (uint i=0; i<worker.size(); i++) {
+        cout << "čekam da se dodaju " << endl;
+        worker[i].join();
+    }
+    
+    cout << "dodali su se " << endl;
+    worker.clear();
+}
+
+client queue::dequeue() {
+    cout << "uzimam jednog iz stacka " << endl;
+    lock_guard<mutex> master(io);
+    client *cli;
+    while (true) {
+        if (clients.size() >= 1) {
+            cli = clients.front();
+            clients.pop_front();
+            cout << "uzimam jednog iz stacka uzeo sam " << endl;
+            return *cli;
+        }
+        else if (clients.size() == 1) {
+             controller = thread([&](){
+                cout << "Upao u tred "<< endl;
+                while(true) {
+                    // io.lock();
+                    // uint missing = limit-clients.size();
+                    // cout << "nedostaje " << missing << endl;
+                    // if (missing > 0.6*limit) {
+                        // enqueue();
+                    if (clients.size() <= 1) {
+                        if (address.empty() && srv != NULL) {
+                            clients.push_back(new client(srv, timeout, securefds));
+                        }
+                        else {
+                            clients.push_back(new client(address, port, timeout, securefds));
+                        }
+                    }
+                    // }
+                    // usleep(missing*100000);
+                    // io.unlock();
+                    // usleep(1000);
+                    sleep(1);
+
+                }
+            });
+        }
+
+        usleep(1000);
+    }
+}
+
+queue::~queue () {
+    for (uint i=0; i<clients.size(); i++) {
+        clients[i]->~client();
+    }
+    clients.clear();
+}
