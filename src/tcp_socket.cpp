@@ -64,22 +64,26 @@ void server::sync(void (*handlecli)(client&), const uint timeout) {
  * Nije moguće proslijediti druge parametre;
 */
 
-void server::async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout) {
-    mutex io;
-    do {
-        for (uint i=0; i<limit; i++) {
-            thr.push_back(thread([&](){
-                client cli(this, timeout, securefds);
-                handlecli(cli, io);
-            }));
-        }
+void server::async(const uint limit, void (*handlecli)(client&), const uint timeout) {
+    for (uint i=0; i<limit; i++) {
+        thr.push_back(thread([&](){
+            client *cli = new client(this, timeout, securefds);
+            while (true) {
+                try {
+                    handlecli(*cli);
+                } catch (const ConnectionException err) {
+                    if (err.isInterrupted()) {
+                        cli->~client();
+                        cli = new client(this, timeout, securefds);
+                    }                    
+                }
+            }
+        }));
+    }
 
-        for (uint i=0; i<limit; i++) {
-            thr[i].join();
-        }
-        thr.clear();
-
-    } while (true);
+    for (uint i=0; i<limit; i++) {
+        thr[i].join();
+    }
 }
 
 
@@ -172,6 +176,7 @@ secure::~secure () {
 */
 
 client::client(const string address, const ushort port, const uint timeout, SSL_CTX* securefds) {
+    _timeout = timeout;
 
     #if _WIN32
         if (WSAStartup(MAKEWORD(2,2),&wsa) != 0) {
@@ -196,8 +201,8 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 
     #if __linux__
         struct timeval tv;
-        tv.tv_sec = timeout/1000;
-        tv.tv_usec = (timeout%1000)*1000;
+        tv.tv_sec = 0;
+        tv.tv_usec = SOCKET_TIMEOUT;
 
         if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
             throw string("[ERROR] Unable to set timeout ");
@@ -237,6 +242,7 @@ client::client(const string address, const ushort port, const uint timeout, SSL_
 client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
     srv = _srv;
     socklen_t len = sizeof(struct sockaddr_in);
+    _timeout = timeout;
 
     if ((conn = accept(srv->sock, (struct sockaddr *)&(srv->addr), (socklen_t*)&len)) < 0) {
         throw string("[ERROR] Unable to accept client connection ");
@@ -244,8 +250,8 @@ client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
 
     #if __linux__
         struct timeval tv;
-        tv.tv_sec = timeout/1000;
-        tv.tv_usec = (timeout%1000)*1000;
+        tv.tv_sec = 0;
+        tv.tv_usec = SOCKET_TIMEOUT;
 
         if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
             throw string("[ERROR] Unable to set timeout ");
@@ -257,9 +263,6 @@ client::client(const server *_srv, const uint timeout, SSL_CTX* securefds) {
             throw string("[ERROR] Unable to set timeout ");
         }
     #endif
-
-    
-
 
     if (securefds) {
         ssl = SSL_new(securefds);
@@ -338,8 +341,7 @@ bool client::push(const string msg) {
         }
 
         if (sent == -1) {
-            // Greška pri slanju poruke
-            return false;
+            throw string("[ERRNO] (push) - Error code: " + to_string(errno) + " Detail: " + strerror(errno));
         }
 
         total_sent += sent;
@@ -352,11 +354,31 @@ bool client::push(const string msg) {
  * Metoda klase client za primanje poruke preko soketa
  * Prima dozvoljeni broj karaktera koji će primiti
  * Vraća string primljene poruke
+ * 
+ * Funkcija baca izuzetke koji se moraju uhvatiti za pravilno rukovođenje vezom
+ * Potrebno je i baciti dalje taj izuzetak ukoliko se koriste server async metode
+ * PRILOG
+ * ----------------------------------------------------------------
+ *          try {
+                fromclient = cli.pull();
+            }
+            catch(const ConnectionException except) {
+                if (except.isInterrupted()) {
+                    throw except;
+                }
+                else {
+                    cout << "[EXCEPT] " << except.what() << endl;
+                    fromclient = except.getData();
+                }
+            } 
+ * -----------------------------------------------------------------
+ * 
 */
 
 string client::pull(size_t byte_limit) {
     char res[byte_limit] = {0};
     size_t total_received = 0;
+    auto start = high_resolution_clock::now();
 
     while (total_received < byte_limit) {
         ssize_t received = 0;
@@ -367,15 +389,21 @@ string client::pull(size_t byte_limit) {
             received = recv(conn, res + total_received, byte_limit - total_received, 0);
         }
 
+        cout << "Primljeno " << received << endl;
+
         if (received == -1) {
-            // Greška pri primanju poruke
-            break;
+            throw ConnectionException(strerror(errno), string(res, total_received));
         } else if (received == 0) {
-            // Veza je prekinuta
-            break;
+            throw ConnectionException("The socket is broken", string(res), true);
         }
 
         total_received += received;
+
+        auto cycle = high_resolution_clock::now();
+        if (duration_cast<milliseconds>(cycle - start).count() > _timeout) {
+            cout << "TIMEOUT" << endl;
+            throw ConnectionException("Timeout", string(res));
+        }
     }
 
     return string(res);

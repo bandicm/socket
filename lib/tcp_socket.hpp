@@ -7,8 +7,14 @@
 #include <thread>
 #include <mutex>
 #include <string.h>
+#include <errno.h>
+#include <chrono>
+#include <stdexcept>
+
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#define SOCKET_TIMEOUT 1000;    // timeout u us
 
 #if __linux__
     #include <arpa/inet.h>
@@ -25,6 +31,7 @@
 #include "ip.hpp"
 
 using namespace std;
+using namespace chrono;
 
 class client;
 // class secure;
@@ -52,7 +59,7 @@ class server {
     ~server ();
 
     void sync(void (*handlecli)(client&), const uint timeout = 100);
-    void async(const uint limit, void (*handlecli)(client&, mutex&), const uint timeout = 100);
+    void async(const uint limit, void (*handlecli)(client&), const uint timeout = 100);
 
 };
 
@@ -87,6 +94,7 @@ class client {
     #endif
     struct sockaddr_in addr;
     SSL* ssl = NULL;
+    uint _timeout = 100; // timeout u ms
     // server s klijentima
     const server* srv;
     // klijent sa serverom
@@ -100,6 +108,29 @@ class client {
     ~client ();
     bool push (const string msg);
     string pull (size_t byte_limit = 1024);
+};
+
+
+class ConnectionException : public exception {
+public:
+    ConnectionException(const string& message, const string& data, const bool& interrupted = false): message_(message), data_(data), interrupted_(interrupted) {}
+
+    virtual const char* what() const noexcept {
+        return message_.c_str();
+    }
+
+    const string& getData() const {
+        return data_;
+    }
+
+    const bool& isInterrupted() const {
+        return interrupted_;
+    }
+
+private:
+    string message_;
+    string data_;
+    bool interrupted_;
 };
 
 #endif

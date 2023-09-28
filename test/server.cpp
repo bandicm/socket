@@ -1,8 +1,12 @@
 #include <iostream>
+#include <chrono>
+
 
 #include "../lib/tcp_socket.hpp"
 
 using namespace std;
+using namespace chrono;
+
 
 int main() {
     try{
@@ -52,15 +56,31 @@ int main() {
         cout << "init server " << endl;
         server myserver(5000, 100);
         cout << "init client " << endl;
-        myserver.async(8, [](client &cli, mutex &io) {
-            cout << "Klijent " << cli.ipv4 << endl;
-            string fromclient = cli.pull();
-            io.lock();
-            cout << "S klijenta " << fromclient << endl;
-            io.unlock();
-            // fromclient += teststr;
+        myserver.async(8, [](client &cli) {
+            auto t3 = high_resolution_clock::now();
+            string fromclient;
+            try {
+                fromclient = cli.pull();
+            }
+            catch(const ConnectionException except) {
+                if (except.isInterrupted()) {
+                    throw except;
+                }
+                else {
+                    cout << "[EXCEPT] " << except.what() << endl;
+                    fromclient = except.getData();
+                }
+            } 
+            auto t4 = high_resolution_clock::now();
+            cout << "Recive : " << duration_cast<microseconds>(t4 - t3).count() << endl;
+            
+            cout << "> " << fromclient << endl;
+            auto t5 = high_resolution_clock::now();
             cli.push(fromclient);
-        }, 200);
+             auto t6 = high_resolution_clock::now();
+            cout << "Response : " << duration_cast<microseconds>(t6 - t5).count() << endl;
+
+        });
 
         // string teststr = " Idemooo";
 
